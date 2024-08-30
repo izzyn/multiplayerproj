@@ -1,5 +1,6 @@
 use std::{
-    collections::hash_map::HashMap, io::{prelude::*, BufReader}, net::{SocketAddr, TcpListener, TcpStream}
+    collections::hash_map::HashMap, 
+    io::{prelude::*, BufReader}, net::{SocketAddr, TcpListener, TcpStream}
 };
 
 struct Client {
