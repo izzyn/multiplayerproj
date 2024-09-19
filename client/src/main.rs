@@ -4,31 +4,6 @@ use std::io;
 use tokio::io::AsyncReadExt;
 use tokio::net::TcpStream;
 
-enum Type {
-    String,
-    U32,
-    U64,
-    Usize,
-    Signal,
-    BeginArgs,
-
-}
-
-struct BuffData {
-    len : [u8; 4],
-    d_type : Type,
-
-
-}
-
-impl BuffData {
-    fn write_len(&mut self, len : u32){
-        let bytes = len.to_be_bytes();
-        self.len = bytes;
-
-    }
-    
-}
 
 
 #[tokio::main]
@@ -43,9 +18,8 @@ async fn send_request(stream: TcpStream) -> Result<(), Box<dyn Error>> {
 
     let mut buf = BuffData{
         d_type: Type::String,
-        len: 9999999_u32.to_be_bytes(),
+        data: Vec::new(),
     };
-    println!("{}", buf.len[0]);
     
     loop {
         println!("Expecting input...");
