@@ -17,10 +17,6 @@ async fn main() {
 
 async fn send_request(stream: TcpStream) -> Result<(), Box<dyn Error>> {
 
-    let mut buf = BuffData{
-        d_type: Type::String,
-        data: Vec::new(),
-    };
     
     loop {
         println!("Expecting input...");
