@@ -69,40 +69,49 @@ pub mod data {
                 idx += 1;
                 let data = match bytes[typeidx] {
                     0 => {
+                        let parsed = ParsedData::U8(u8::from_be_bytes(*bytes[idx..].first_chunk::<1>().ok_or(DataParseError{})?));
                         idx += 1;
-                        ParsedData::U8(u8::from_be_bytes(*bytes[idx..].first_chunk::<1>().ok_or(DataParseError{})?))
+                        parsed
                     },
                     1 => {
+                        let parsed = ParsedData::U16(u16::from_be_bytes(*bytes[idx..].first_chunk::<2>().ok_or(DataParseError{})?));
                         idx += 2;
-                        ParsedData::U16(u16::from_be_bytes(*bytes[idx..].first_chunk::<2>().ok_or(DataParseError{})?))
+                        parsed
                     },
                     2 => {
+                        let parsed = ParsedData::U32(u32::from_be_bytes(*bytes[idx..].first_chunk::<4>().ok_or(DataParseError{})?));
                         idx += 4;
-                        ParsedData::U32(u32::from_be_bytes(*bytes[idx..].first_chunk::<4>().ok_or(DataParseError{})?))
+                        parsed
                     },
                     3 => {
+                        let parsed = ParsedData::U64(u64::from_be_bytes(*bytes[idx..].first_chunk::<8>().ok_or(DataParseError{})?));
                         idx += 8;
-                        ParsedData::U64(u64::from_be_bytes(*bytes[idx..].first_chunk::<8>().ok_or(DataParseError{})?))
+                        parsed
                     },
                     4 => {
+                        let parsed = ParsedData::I8(i8::from_be_bytes(*bytes[idx..].first_chunk::<1>().ok_or(DataParseError{})?));
                         idx += 1;
-                        ParsedData::I8(i8::from_be_bytes(*bytes[idx..].first_chunk::<1>().ok_or(DataParseError{})?))
+                        parsed
                     },
                     5 => {
+                        let parsed = ParsedData::I16(i16::from_be_bytes(*bytes[idx..].first_chunk::<2>().ok_or(DataParseError{})?));
                         idx += 2;
-                        ParsedData::I16(i16::from_be_bytes(*bytes[idx..].first_chunk::<2>().ok_or(DataParseError{})?))
+                        parsed
                     },
                     6 => {
+                        let parsed = ParsedData::I32(i32::from_be_bytes(*bytes[idx..].first_chunk::<4>().ok_or(DataParseError{})?));
                         idx += 4;
-                        ParsedData::I32(i32::from_be_bytes(*bytes[idx..].first_chunk::<4>().ok_or(DataParseError{})?))
+                        parsed
                     },
                     7 => {
+                        let parsed = ParsedData::I64(i64::from_be_bytes(*bytes[idx..].first_chunk::<8>().ok_or(DataParseError{})?));
                         idx += 8;
-                        ParsedData::I64(i64::from_be_bytes(*bytes[idx..].first_chunk::<8>().ok_or(DataParseError{})?))
+                        parsed
                     },
                     8 => {
+                        let parsed = ParsedData::CHAR(char::from_u32(u32::from_be_bytes(*bytes[idx..].first_chunk::<4>().ok_or(DataParseError{})?)).unwrap());
                         idx += 4;
-                        ParsedData::CHAR(char::from_u32(u32::from_be_bytes(*bytes[idx..].first_chunk::<4>().ok_or(DataParseError{})?)).unwrap())
+                        parsed
                     },
                     _ => return Err(DataParseError {})
                 };
