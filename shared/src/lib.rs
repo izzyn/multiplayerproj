@@ -4,7 +4,7 @@ pub fn add(left: u64, right: u64) -> u64 {
 }
 
 pub mod data {
-    use std::{error::Error, fmt, num::NonZeroUsize};
+    use std::{error::Error, fmt, num::{NonZero, NonZeroUsize}};
 
     #[derive(Debug)]
     pub struct DataParseError {}
@@ -42,7 +42,7 @@ pub mod data {
     }
 
     struct ParsedNode {
-        parent: ParsedNodeId,
+        parent: Option<ParsedNodeId>,
 
         // you don't need these fields but they might be handy, as you wish
         next: Option<ParsedNodeId>,
@@ -55,10 +55,53 @@ pub mod data {
         nodes: Vec<ParsedNode>,
     }
 
+    macro_rules! encode {
+        ($id:literal, $len:literal, $type:ty, $name:ident) => {
+            fn $name(data : $type) -> [u8 ; $len]{
+                
+                const LENGTH : usize = $len;
+                let converted_data = data.to_be_bytes();
+                let mut returndata : [u8 ; LENGTH] = [0;LENGTH];
+                returndata[0] = $id;
+                for i in 0..returndata.len()-1 {
+                    returndata[i+1] = converted_data[i];
+                }
+                return returndata
+
+            }
+        };
+    }
+
 
     impl ParsedData{
+
+        //Generate all the basic type encoding
+        encode!(0,2, u8, encode_u8);
+        encode!(1,3, u16, encode_u16);
+        encode!(2,5, u32, encode_u32);
+        encode!(3,9, u64, encode_u64);
+        encode!(4,2, i8, encode_i8);
+        encode!(5,3, i16, encode_i16);
+        encode!(6,5, i32, encode_i32);
+        encode!(7,9, i64, encode_i64);
+
+        fn encode_char(data : char) -> [u8; 5]{
+            const LENGTH : usize = 5;
+            let mut returndata : [u8 ; LENGTH] = [0;LENGTH];
+            returndata[0] = 8;
+            let converted_data = (data as u32).to_be_bytes();
+            for i in 0..LENGTH {
+                returndata[i+1] = converted_data[i];
+            }
+            return returndata
+        }
+
         fn parse(bytes : &[u8]) -> Result<ParsedTree, DataParseError> {
+            let mut tree = ParsedTree { nodes : vec![]};
             let mut idx = 0;
+            let mut previousid = None;
+            let mut currentid = ParsedNodeId(NonZeroUsize::new(1).expect("1 was equal to 0?"));
+            let mut currentparent : Option<ParsedNodeId> = None;
 
             loop {
                 if idx >= bytes.len() {
@@ -67,6 +110,10 @@ pub mod data {
 
                 let typeidx = idx;
                 idx += 1;
+                match currentid.0.checked_add(1) {
+                    None => {println!("Parsing tree id caused integer overflow"); return Err(DataParseError{}) },
+                    _ => (),
+                }
                 let data = match bytes[typeidx] {
                     0 => {
                         let parsed = ParsedData::U8(u8::from_be_bytes(*bytes[idx..].first_chunk::<1>().ok_or(DataParseError{})?));
@@ -115,6 +162,15 @@ pub mod data {
                     },
                     _ => return Err(DataParseError {})
                 };
+                let mut node = ParsedNode {
+                    parent : currentparent,
+                    next : None,
+                    data : data,
+                    prev : previousid,
+
+
+                };
+
             }
             return Err(DataParseError {  });
         }
@@ -122,41 +178,6 @@ pub mod data {
             return Err(DataParseError { })
 
         }
-    }
-    macro_rules! encode {
-        ($id:literal, $len:literal, $type:ty, $name:ident) => {
-            fn $name(data : $type) -> [u8 ; $len]{
-                
-                const LENGTH : usize = $len;
-                let converted_data = data.to_be_bytes();
-                let mut returndata : [u8 ; LENGTH] = [0;LENGTH];
-                returndata[0] = $id;
-                for i in 0..returndata.len()-1 {
-                    returndata[i+1] = converted_data[i];
-                }
-                return returndata
-
-            }
-        };
-    }
-    //Generate all the basic type encoding
-    encode!(0,2, u8, encode_u8);
-    encode!(1,3, u16, encode_u16);
-    encode!(2,5, u32, encode_u32);
-    encode!(3,9, u64, encode_u64);
-    encode!(4,2, i8, encode_i8);
-    encode!(5,3, i16, encode_i16);
-    encode!(6,5, i32, encode_i32);
-    encode!(7,9, i64, encode_i64);
-    fn encode_char(data : char) -> [u8; 5]{
-        const LENGTH : usize = 5;
-        let mut returndata : [u8 ; LENGTH] = [0;LENGTH];
-        returndata[0] = 8;
-        let converted_data = (data as u32).to_be_bytes();
-        for i in 0..LENGTH {
-            returndata[i+1] = converted_data[i];
-        }
-        return returndata
     }
     
 
