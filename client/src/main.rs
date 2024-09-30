@@ -30,7 +30,11 @@ async fn send_request(stream: TcpStream) -> Result<(), Box<dyn Error>> {
         }
         loop {
             stream.writable().await?;
-            match stream.try_write(b"Hello!") {
+            println!("{:?}", &shared::data::encode_u64(32948));
+            let data_ids = shared::data::DataIDs::ENDPKG as u8;
+            let mut buff : [u8 ; 10] = [0; 10];
+            
+            match stream.try_write() {
                 Ok(n) => {
                     println!("Wrote {} bytes", n);
                     break;
