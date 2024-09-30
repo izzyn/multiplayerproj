@@ -100,11 +100,11 @@ pub struct ParsedTree {
 }
 
 macro_rules! encode {
-    ($id:ident, $len:literal, $type:ty) => {
+    ($id:ident, $type:ty) => {
         ::paste::paste!{
-            pub fn [<encode_ $type>](data : $type) -> [u8 ; $len]{
+            pub fn [<encode_ $type>](data : $type) -> [u8 ; size_of::<$type>()+1]{
                 
-                const LENGTH : usize = $len;
+                const LENGTH : usize = size_of::<$type>()+1;
                 let converted_data = data.to_be_bytes();
                 let mut returndata : [u8 ; LENGTH] = [0;LENGTH];
                 returndata[0] = DataIDs::$id as u8;
@@ -119,14 +119,14 @@ macro_rules! encode {
     };
 }
 
-encode!(U8,2, u8);
-encode!(U16,3, u16);
-encode!(U32,5, u32);
-encode!(U64,9, u64);
-encode!(I8,2, i8);
-encode!(I16,3, i16);
-encode!(I32,5, i32);
-encode!(I64,9, i64);
+encode!(U8, u8);
+encode!(U16, u16);
+encode!(U32, u32);
+encode!(U64, u64);
+encode!(I8, i8);
+encode!(I16, i16);
+encode!(I32, i32);
+encode!(I64, i64);
 pub fn encode_char(data : char) -> [u8; 5]{
     const LENGTH : usize = 5;
     let mut returndata : [u8 ; LENGTH] = [0;LENGTH];
@@ -138,8 +138,8 @@ pub fn encode_char(data : char) -> [u8; 5]{
     return returndata
 }
 
-encode!(F32,5, f32);
-encode!(F64,9, f64);
+encode!(F32, f32);
+encode!(F64, f64);
 
 
 //pub fn format_data()
