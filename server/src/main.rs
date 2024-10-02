@@ -51,7 +51,6 @@ async fn handle_stream(stream: TcpStream) -> Result<(), Box<dyn Error>> {
 	    buf = [0; 1024];
             match stream.try_read(&mut buf) {
                 Ok(n) => {
-                    println!("{:?}", buf);
                     let parsed = match shared::data::parse(&buf) {
                         Ok(t) => println!("{:?}", t.nodes[0].data),
                         Err(e) => return Err(Box::new(e))

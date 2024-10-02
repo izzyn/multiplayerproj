@@ -127,12 +127,12 @@ encode!(I8, i8);
 encode!(I16, i16);
 encode!(I32, i32);
 encode!(I64, i64);
-pub fn encode_char(data : char) -> [u8; 5]{
-    const LENGTH : usize = 5;
+pub fn encode_char(data : char) -> [u8; size_of::<char>()+1]{
+    const LENGTH : usize = size_of::<char>()+1;
     let mut returndata : [u8 ; LENGTH] = [0;LENGTH];
     returndata[0] = DataIDs::CHAR as u8;
     let converted_data = (data as u32).to_be_bytes();
-    for i in 0..LENGTH {
+    for i in 0..LENGTH-1 {
         returndata[i+1] = converted_data[i];
     }
     return returndata
@@ -252,7 +252,7 @@ pub fn parse(bytes : &[u8]) -> Result<ParsedTree, DataParseError> {
         tree.nodes.push(node);
 
     }
-    return Ok(tree);
+    return Err(DataParseError {message : String::from("Recieved data without a proper end signal.")});
 }
 
 impl ParsedData{
@@ -271,10 +271,13 @@ macro_rules! test_encoding {
             #[test]
             fn [<test_encoding_ $type>](){
                 const SIZE : usize = size_of::<$type>()+2;
+                println!("{}", SIZE);
                 let mut buff : [u8 ; SIZE] = [0; SIZE];
                 
-                for i in [<TESTS_ $type>] {
-                    let test_bytes = [<encode_ $type>](i);
+                for j in 0..[<TESTS_ $type>].len() {
+                    println!("{}", [<TESTS_ $type>].len());
+                    let test_bytes = [<encode_ $type>]([<TESTS_ $type>][j]);
+                    println!("{}", test_bytes.len());
                     for i in 0..test_bytes.len() {
                         buff[i] = test_bytes[i];
                     }
@@ -286,7 +289,7 @@ macro_rules! test_encoding {
                     
                     let data = tree.nodes[0].data.clone();
                     match data {
-                        ParsedData::$enumvalue(contents) => assert_eq!(i, contents),
+                        ParsedData::$enumvalue(contents) => assert_eq!([<TESTS_ $type>][j], contents),
                         _ => panic!("Incorrect datatype parsed"),
                     }
                 }
@@ -333,6 +336,8 @@ mod tests {
     #[allow(non_snake_case, non_upper_case_globals)]
     const TESTS_f64 : [f64; 5] = [2.0,i16::MAX as f64,-999.0,30.0,-2319.392048];
 
+    #[allow(non_snake_case, non_upper_case_globals)]
+    const TESTS_char : [char; 5] = ['Ä','\\', '\n', 'å', 'A'];
     //Test functions for primitive types
     test_encoding!(u8, U8);
     test_encoding!(u16, U16);
@@ -344,4 +349,5 @@ mod tests {
     test_encoding!(i64, I64);
     test_encoding!(f32, F32);
     test_encoding!(f64, F64);
+    test_encoding!(char, CHAR);
 }
