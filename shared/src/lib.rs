@@ -1,7 +1,7 @@
 //shared/src/lib.rs
 pub mod data {
 use core::f32;
-use std::{error::Error, fmt, num::NonZeroUsize, str::FromStr};
+use std::{error::Error, fmt, num::NonZeroUsize, str::FromStr, usize};
 
 #[derive(Debug)]
 pub struct DataParseError {
@@ -108,9 +108,7 @@ macro_rules! encode {
                 let converted_data = data.to_be_bytes();
                 let mut returndata : [u8 ; LENGTH] = [0;LENGTH];
                 returndata[0] = DataIDs::$id as u8;
-                for i in 0..returndata.len()-1 {
-                    returndata[i+1] = converted_data[i];
-                }
+                returndata[1..].copy_from_slice(&converted_data);
                 return returndata
 
             }
@@ -132,14 +130,28 @@ pub fn encode_char(data : char) -> [u8; size_of::<char>()+1]{
     let mut returndata : [u8 ; LENGTH] = [0;LENGTH];
     returndata[0] = DataIDs::CHAR as u8;
     let converted_data = (data as u32).to_be_bytes();
-    for i in 0..LENGTH-1 {
-        returndata[i+1] = converted_data[i];
-    }
+    returndata[1..].copy_from_slice(&converted_data);
     return returndata
 }
 
 encode!(F32, f32);
 encode!(F64, f64);
+
+pub fn encode_string(data : String) -> Result<Vec<u8>, DataParseError> {
+    let length = data.len();
+    let mut lencopy = length;
+    let mut n = 1;
+    while lencopy != 0 {
+        lencopy >>= 8 * n;
+        n *= 2;
+    }
+    match n {}
+    println!("{}", n);
+    let mut returndata : Vec<u8> = Vec::new();
+    returndata[1..].copy_from_slice(&data.into_bytes());
+    returndata[0] = DataIDs::STRING as u8;
+    return returndata;
+}
 
 
 //pub fn format_data()
@@ -350,4 +362,29 @@ mod tests {
     test_encoding!(f32, F32);
     test_encoding!(f64, F64);
     test_encoding!(char, CHAR);
+    //#[test]
+    //fn test_encoding_string(){
+    //    println!("{}", SIZE);
+    //    let mut buff : [u8 ; SIZE] = [0; SIZE];
+    //    
+    //    for j in 0..[<TESTS_ $type>].len() {
+    //        println!("{}", [<TESTS_ $type>].len());
+    //        let test_bytes = [<encode_ $type>]([<TESTS_ $type>][j]);
+    //        println!("{}", test_bytes.len());
+    //        for i in 0..test_bytes.len() {
+    //            buff[i] = test_bytes[i];
+    //        }
+    //        buff[SIZE - 1] = DataIDs::ENDPKG as u8;
+    //        let tree = match parse(&buff) {
+    //            Ok(t) => t,
+    //            Err(e) => panic!("{:?}", e),
+    //        };
+    //        
+    //        let data = tree.nodes[0].data.clone();
+    //        match data {
+    //            ParsedData::$enumvalue(contents) => assert_eq!([<TESTS_ $type>][j], contents),
+    //            _ => panic!("Incorrect datatype parsed"),
+    //        }
+    //    }
+    //}
 }
