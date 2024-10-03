@@ -154,13 +154,13 @@ pub mod data {
         println!("Length of string in bytes: {length}");
         println!("Amount of bytes in length {}", n);
         match n {
-        1 => returndata.extend_from_slice(&encode_u8(length.try_into().unwrap())),
-        2 => returndata.extend_from_slice(&encode_u16(length.try_into().unwrap())),
-        4 => returndata.extend_from_slice(&encode_u32(length.try_into().unwrap())),
-        8 => returndata.extend_from_slice(&encode_u64(length.try_into().unwrap())),
-        _ => return Err(DataParseError {message : "Your string is ridiculously long, or the size calculation is badly written. Equally likely.".to_string()}),
+            1 => returndata.extend_from_slice(&encode_u8(length.try_into().unwrap())),
+            2 => returndata.extend_from_slice(&encode_u16(length.try_into().unwrap())),
+            4 => returndata.extend_from_slice(&encode_u32(length.try_into().unwrap())),
+            8 => returndata.extend_from_slice(&encode_u64(length.try_into().unwrap())),
+            _ => return Err(DataParseError {message : "Your string is ridiculously long, or the size calculation is badly written. Equally likely.".to_string()}),
 
-    }
+        }
         returndata.extend_from_slice(stringbytes);
         println!("String UTF8 Encoding: {:?}", returndata);
         return Ok(returndata);
