@@ -7,7 +7,7 @@ pub mod data {
 
     #[derive(Debug)]
     pub struct DataParseError {
-        message: String,
+        pub message: String,
     }
 
     impl Error for DataParseError {}
@@ -138,7 +138,8 @@ pub mod data {
     encode!(F64, f64);
 
     pub fn encode_string(data: String) -> Result<Vec<u8>, DataParseError> {
-        let length = data.len();
+        let stringbytes = &data.into_bytes();
+        let length = stringbytes.len();
         let mut lencopy = length;
         let mut n = 1;
         while lencopy != 0 {
@@ -146,19 +147,22 @@ pub mod data {
                 n *= 2;
             }
             lencopy >>= 8 * n;
+            n *= 2;
         }
         let mut returndata: Vec<u8> = Vec::new();
         returndata.push(DataIDs::STRING as u8);
+        println!("Length of string in bytes: {length}");
+        println!("Amount of bytes in length {}", n);
         match n {
         1 => returndata.extend_from_slice(&encode_u8(length.try_into().unwrap())),
         2 => returndata.extend_from_slice(&encode_u16(length.try_into().unwrap())),
         4 => returndata.extend_from_slice(&encode_u32(length.try_into().unwrap())),
         8 => returndata.extend_from_slice(&encode_u64(length.try_into().unwrap())),
-        _ => return Err(DataParseError {message : "Your string is ridiculously long, or the size calculation is badly written. Equally likely".to_string()}),
+        _ => return Err(DataParseError {message : "Your string is ridiculously long, or the size calculation is badly written. Equally likely.".to_string()}),
 
     }
-        println!("{}", n);
-        returndata.extend_from_slice(&data.into_bytes());
+        returndata.extend_from_slice(stringbytes);
+        println!("String UTF8 Encoding: {:?}", returndata);
         return Ok(returndata);
     }
 
@@ -190,7 +194,7 @@ pub mod data {
             let data = match DataIDs::try_from(bytes[typeidx])
                 .ok()
                 .ok_or(DataParseError {
-                    message: "Attempted to parse invalid datatype".to_string(),
+                    message: "Attempted to parse datatype that doesn't exist".to_string(),
                 })? {
                 DataIDs::U8
                 | DataIDs::U16
@@ -208,8 +212,10 @@ pub mod data {
                     result.0
                 }
                 DataIDs::STRING => {
-                    let result = parse_basic(&bytes[typeidx..])?;
-                    idx += result.1;
+                    let result = parse_basic(&bytes[typeidx + 1..])?;
+                    println!("Parsing string...");
+                    println!("{:?}", &bytes[typeidx + 1..]);
+                    idx += result.1 + 1;
                     let length = match result.0 {
                     ParsedData::U8(t) => {
                         t as usize
@@ -224,9 +230,11 @@ pub mod data {
                         t as usize
                     },
                     _ => {return Err(DataParseError {message : "String length was of an invalid type (did you try to use a signed integer?)".to_string()})}
-                };
-                    if bytes.len() >= idx {
-                        let string = match from_utf8(&bytes[idx..length]) {
+                    };
+                    println!("Length of string: {length}");
+                    if bytes.len() >= idx + length {
+                        println!("Bytes to parse as UTF8 {:?}", &bytes[idx..idx + length]);
+                        let string = match from_utf8(&bytes[idx..length + idx]) {
                             Ok(t) => t.to_string(),
                             Err(e) => {
                                 return Err(DataParseError {
@@ -234,10 +242,12 @@ pub mod data {
                                 })
                             }
                         };
+                        idx += length;
+                        println!("Index of next data: {}", idx);
                         ParsedData::STRING(string)
                     } else {
                         return Err(DataParseError {
-                            message: "Client lied about string length".to_string(),
+                            message: "Reading string would cause a buffer overflow :(".to_string(),
                         });
                     }
                 }
@@ -271,7 +281,7 @@ pub mod data {
         let mut idx = 0;
         let datatypeerr = "Error when parsing ".to_string();
         let data = match DataIDs::try_from(bytes[0]).ok().ok_or(DataParseError {
-            message: "Attempted to parse invalid datatype".to_string(),
+            message: "Attempted to parse invalid datatype when parsing basic data".to_string(),
         })? {
             DataIDs::U8 => {
                 let parsed = ParsedData::U8(u8::from_be_bytes(
@@ -420,7 +430,7 @@ macro_rules! test_encoding {
 #[cfg(test)]
 mod tests {
     use core::panic;
-    use std::{fs, i32, u8};
+    use std::{fs, i32, str::from_utf8, u8};
 
     use super::*;
     use data::*;
@@ -491,18 +501,33 @@ mod tests {
                 Ok(t) => t,
             };
             println!("{}", test_bytes.len());
+            let mut maxlen = 0;
             for i in 0..test_bytes.len() {
+                if i >= buff.len() - 1 {
+                    break;
+                }
+                maxlen += 1;
                 buff[i] = test_bytes[i];
             }
-            buff[SIZE - 1] = DataIDs::ENDPKG as u8;
+            buff[maxlen] = DataIDs::ENDPKG as u8;
             let tree = match parse(&buff) {
                 Ok(t) => t,
-                Err(e) => panic!("{:?}", e),
+                Err(e) => {
+                    if test_bytes.len() > buff.len() - 1
+                        && e.message
+                            == "Reading string would cause a buffer overflow :(".to_string()
+                    {
+                        return;
+                    }
+                    panic!("{:?}", e)
+                }
             };
 
             let data = tree.nodes[0].data.clone();
             match data {
-                ParsedData::STRING(contents) => assert_eq!(TESTS_String[j], contents),
+                ParsedData::STRING(contents) => {
+                    assert_eq!(TESTS_String[j], contents)
+                }
                 _ => panic!("Incorrect datatype parsed"),
             }
         }
