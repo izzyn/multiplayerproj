@@ -79,10 +79,7 @@ pub mod data {
             first_child: Option<ParsedNodeId>,
             last_child: Option<ParsedNodeId>,
         },
-        BEGINARGS {
-            first_child: Option<ParsedNodeId>,
-            last_child: Option<ParsedNodeId>,
-        },
+        SIGNAL(u32),
     }
 
     pub struct ParsedNode {
