@@ -1,19 +1,17 @@
 // src/bin/server.rs
+use core::net::SocketAddr;
 use std::{error::Error, i32, io};
 use tokio::{
     io::{AsyncReadExt, Interest},
     net::{TcpListener, TcpStream},
 };
-use core::net::SocketAddr;
 
 struct Client {
-    sendpkts : Vec<i32>,
-    sendbfr : [i32; 2048],
-    readbfr : [i32; 2048],
-    addr : SocketAddr,
-    
+    sendpkts: Vec<i32>,
+    sendbfr: [i32; 2048],
+    readbfr: [i32; 2048],
+    addr: SocketAddr,
 }
-
 
 #[tokio::main]
 async fn main() {
@@ -42,20 +40,19 @@ async fn handle_stream(stream: TcpStream) -> Result<(), Box<dyn Error>> {
     println!("Connection from {}", stream.peer_addr().unwrap());
     let mut reply_queue: Vec<Vec<u8>> = Vec::new();
     let mut buf: [u8; 1024];
-    
+
     loop {
         let ready = stream
             .ready(Interest::READABLE | Interest::WRITABLE)
             .await?;
         if ready.is_readable() {
-	    buf = [0; 1024];
+            buf = [0; 1024];
             match stream.try_read(&mut buf) {
                 Ok(n) => {
                     let parsed = match shared::data::parse(&buf) {
                         Ok(t) => println!("{:?}", t.nodes[0].data),
-                        Err(e) => return Err(Box::new(e))
+                        Err(e) => return Err(Box::new(e)),
                     };
-
                 }
                 Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
                     continue;
@@ -67,7 +64,7 @@ async fn handle_stream(stream: TcpStream) -> Result<(), Box<dyn Error>> {
         }
 
         if ready.is_writable() {
-            if let Some(msg) =  reply_queue.pop() {
+            if let Some(msg) = reply_queue.pop() {
                 match stream.try_write(&msg) {
                     Ok(n) => {
                         println!("Wrote {} bytes", n);

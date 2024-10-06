@@ -1,10 +1,12 @@
 [package]
-name = "shared"
+name = "shared-proc"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-paste = "1.0.15"
-shared-proc = { path = "../shared-proc", version = "0.1.0" }
+quote = "1.0"
 helper = { path = "../helper", version = "0.1.0" }
+
+[lib]
+proc-macro = true
 

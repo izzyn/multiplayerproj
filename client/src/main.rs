@@ -1,15 +1,13 @@
 // src/bin/client.rs
+use shared_proc::expand;
 use std::error::Error;
 use std::io;
 use tokio::io::AsyncReadExt;
 use tokio::net::TcpStream;
-use shared::data::{};
-
-
 
 #[tokio::main]
 async fn main() {
-
+    let _a = 3.1415;
     let length = 0b1111111111111111111111111;
     let server_addr = "127.0.0.1:1234";
     let stream: TcpStream = TcpStream::connect(server_addr).await.unwrap();
@@ -18,17 +16,17 @@ async fn main() {
 }
 
 async fn send_request(stream: TcpStream) -> Result<(), Box<dyn Error>> {
-
-    
     loop {
         println!("Expecting input...");
         let mut close = false;
         let mut buffer = String::new();
         let stdin = io::stdin(); // We get `Stdin` here.
         stdin.read_line(&mut buffer)?;
-        match buffer.trim(){
+        match buffer.trim() {
             "close" => close = true,
-            _ => {println!("Not real argument");},
+            _ => {
+                println!("Not real argument");
+            }
         }
         loop {
             stream.writable().await?;
@@ -37,11 +35,11 @@ async fn send_request(stream: TcpStream) -> Result<(), Box<dyn Error>> {
             let len = parsed.len();
 
             let data_ids = shared::data::DataIDs::ENDPKG as u8;
-            let mut buff : [u8 ; 10] = [0; 10];
+            let mut buff: [u8; 10] = [0; 10];
             let bufflen = buff.len();
             buff[..parsed.len()].copy_from_slice(&parsed);
             buff[len] = data_ids;
-            
+
             match stream.try_write(&buff) {
                 Ok(n) => {
                     println!("Wrote {} bytes", n);
@@ -74,11 +72,9 @@ async fn send_request(stream: TcpStream) -> Result<(), Box<dyn Error>> {
                 Err(e) => return Err(e.into()),
             }
         }
-        if close{
+        if close {
             println!("Amongus");
             break Ok(());
         }
     }
-
 }
-

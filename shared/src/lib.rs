@@ -1,6 +1,10 @@
 //shared/src/lib.rs
+pub mod signal;
+
+use helper::{ParsedData, ParsedNode, ParsedNodeId, ParsedTree};
 pub mod data {
     use core::f32;
+    pub use helper::{ParsedData, ParsedNode, ParsedNodeId, ParsedTree};
     use std::fs;
     use std::str::from_utf8;
     use std::{error::Error, fmt, num::NonZeroUsize, str::FromStr, usize};
@@ -58,43 +62,6 @@ pub mod data {
             };
         }
     }
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    pub struct ParsedNodeId(NonZeroUsize);
-
-    #[derive(Debug, Clone)]
-    pub enum ParsedData {
-        U8(u8),
-        U16(u16),
-        U32(u32),
-        U64(u64),
-        I8(i8),
-        I16(i16),
-        I32(i32),
-        I64(i64),
-        CHAR(char),
-        F32(f32),
-        F64(f64),
-        STRING(String),
-        VECTOR {
-            first_child: Option<ParsedNodeId>,
-            last_child: Option<ParsedNodeId>,
-        },
-        SIGNAL(u32),
-    }
-
-    pub struct ParsedNode {
-        pub parent: Option<ParsedNodeId>,
-
-        // you don't need these fields but they might be handy, as you wish
-        pub next: Option<ParsedNodeId>,
-        pub prev: Option<ParsedNodeId>,
-
-        pub data: ParsedData,
-    }
-
-    pub struct ParsedTree {
-        pub nodes: Vec<ParsedNode>,
-    }
 
     macro_rules! encode {
         ($id:ident, $type:ty) => {
@@ -151,13 +118,13 @@ pub mod data {
         println!("Length of string in bytes: {length}");
         println!("Amount of bytes in length {}", n);
         match n {
-            1 => returndata.extend_from_slice(&encode_u8(length.try_into().unwrap())),
-            2 => returndata.extend_from_slice(&encode_u16(length.try_into().unwrap())),
-            4 => returndata.extend_from_slice(&encode_u32(length.try_into().unwrap())),
-            8 => returndata.extend_from_slice(&encode_u64(length.try_into().unwrap())),
-            _ => return Err(DataParseError {message : "Your string is ridiculously long, or the size calculation is badly written. Equally likely.".to_string()}),
+        1 => returndata.extend_from_slice(&encode_u8(length.try_into().unwrap())),
+        2 => returndata.extend_from_slice(&encode_u16(length.try_into().unwrap())),
+        4 => returndata.extend_from_slice(&encode_u32(length.try_into().unwrap())),
+        8 => returndata.extend_from_slice(&encode_u64(length.try_into().unwrap())),
+        _ => return Err(DataParseError {message : "Your string is ridiculously long, or the size calculation is badly written. Equally likely.".to_string()}),
 
-        }
+    }
         returndata.extend_from_slice(stringbytes);
         println!("String UTF8 Encoding: {:?}", returndata);
         return Ok(returndata);
@@ -214,20 +181,20 @@ pub mod data {
                     println!("{:?}", &bytes[typeidx + 1..]);
                     idx += result.1 + 1;
                     let length = match result.0 {
-                    ParsedData::U8(t) => {
-                        t as usize
-                    },
-                    ParsedData::U16(t) => {
-                        t as usize
-                    },
-                    ParsedData::U32(t) => {
-                        t as usize
-                    },
-                    ParsedData::U64(t) => {
-                        t as usize
-                    },
-                    _ => {return Err(DataParseError {message : "String length was of an invalid type (did you try to use a signed integer?)".to_string()})}
-                    };
+                ParsedData::U8(t) => {
+                    t as usize
+                },
+                ParsedData::U16(t) => {
+                    t as usize
+                },
+                ParsedData::U32(t) => {
+                    t as usize
+                },
+                ParsedData::U64(t) => {
+                    t as usize
+                },
+                _ => {return Err(DataParseError {message : "String length was of an invalid type (did you try to use a signed integer?)".to_string()})}
+                };
                     println!("Length of string: {length}");
                     if bytes.len() >= idx + length {
                         println!("Bytes to parse as UTF8 {:?}", &bytes[idx..idx + length]);
@@ -391,38 +358,38 @@ pub mod data {
     }
 }
 macro_rules! test_encoding {
-    ($type : ty, $enumvalue : ident) => {
-        ::paste::paste! {
-            #[test]
-            fn [<test_encoding_ $type>](){
-                const SIZE : usize = size_of::<$type>()+2;
-                println!("{}", SIZE);
-                let mut buff : [u8 ; SIZE] = [0; SIZE];
+($type : ty, $enumvalue : ident) => {
+    ::paste::paste! {
+        #[test]
+        fn [<test_encoding_ $type>](){
+            const SIZE : usize = size_of::<$type>()+2;
+            println!("{}", SIZE);
+            let mut buff : [u8 ; SIZE] = [0; SIZE];
 
-                for j in 0..[<TESTS_ $type>].len() {
-                    println!("{}", [<TESTS_ $type>].len());
-                    let test_bytes = [<encode_ $type>]([<TESTS_ $type>][j]);
-                    println!("{}", test_bytes.len());
-                    for i in 0..test_bytes.len() {
-                        buff[i] = test_bytes[i];
-                    }
-                    buff[SIZE - 1] = DataIDs::ENDPKG as u8;
-                    println!("End Signal: {}", buff[SIZE-1]);
-                    let tree = match parse(&buff) {
-                        Ok(t) => t,
-                        Err(e) => panic!("{:?}", e),
-                    };
+            for j in 0..[<TESTS_ $type>].len() {
+                println!("{}", [<TESTS_ $type>].len());
+                let test_bytes = [<encode_ $type>]([<TESTS_ $type>][j]);
+                println!("{}", test_bytes.len());
+                for i in 0..test_bytes.len() {
+                    buff[i] = test_bytes[i];
+                }
+                buff[SIZE - 1] = DataIDs::ENDPKG as u8;
+                println!("End Signal: {}", buff[SIZE-1]);
+                let tree = match parse(&buff) {
+                    Ok(t) => t,
+                    Err(e) => panic!("{:?}", e),
+                };
 
-                    let data = tree.nodes[0].data.clone();
-                    match data {
-                        ParsedData::$enumvalue(contents) => assert_eq!([<TESTS_ $type>][j], contents),
-                        _ => panic!("Incorrect datatype parsed"),
-                    }
+                let data = tree.nodes[0].data.clone();
+                match data {
+                    ParsedData::$enumvalue(contents) => assert_eq!([<TESTS_ $type>][j], contents),
+                    _ => panic!("Incorrect datatype parsed"),
                 }
             }
-
         }
-    };
+
+    }
+};
 }
 #[cfg(test)]
 mod tests {

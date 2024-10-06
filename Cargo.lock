@@ -49,6 +49,7 @@ name = "client"
 version = "0.1.0"
 dependencies = [
  "shared",
+ "shared-proc",
  "tokio",
 ]
 
@@ -57,6 +58,10 @@ name = "gimli"
 version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32085ea23f3234fc7846555e85283ba4de91e21016dc0455a16286d87a292d64"
+
+[[package]]
+name = "helper"
+version = "0.1.0"
 
 [[package]]
 name = "hermit-abi"
@@ -154,7 +159,17 @@ dependencies = [
 name = "shared"
 version = "0.1.0"
 dependencies = [
+ "helper",
  "paste",
+ "shared-proc",
+]
+
+[[package]]
+name = "shared-proc"
+version = "0.1.0"
+dependencies = [
+ "helper",
+ "quote",
 ]
 
 [[package]]
