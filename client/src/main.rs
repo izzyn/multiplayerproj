@@ -1,5 +1,5 @@
 // src/bin/client.rs
-use shared_proc::expand;
+use shared_proc::{expand, netfunc};
 use std::error::Error;
 use std::io;
 use tokio::io::AsyncReadExt;
@@ -14,6 +14,9 @@ async fn main() {
     println!("Connected to {}", stream.peer_addr().unwrap());
     send_request(stream).await.unwrap();
 }
+
+#[netfunc]
+fn testa(a: String, b: i32) {}
 
 async fn send_request(stream: TcpStream) -> Result<(), Box<dyn Error>> {
     loop {
