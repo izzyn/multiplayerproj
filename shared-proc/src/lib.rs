@@ -41,7 +41,7 @@ pub fn netfunc(attr: TokenStream, item: TokenStream) -> TokenStream {
         panic!("can't find the function args")
     };
 
-    let a = iterator.map(|x| println!("{:#?}", x)).skip_while(|x| {j});
+    let a = iterator.map(|x| println!("{:#?}", x)).skip_while(|x| j);
 
     println!("{}", fn_name);
     println!("{}", fn_args);
@@ -80,7 +80,7 @@ pub fn netfunc(attr: TokenStream, item: TokenStream) -> TokenStream {
     let netfnname = format_ident!("{}____net____", fn_name.to_string());
 
     let netfunction = quote! {
-        fn #netfnname(&[Type]) -> Result<DataParseError> {
+        fn #netfnname(&[Type]) -> Result<_, DataParseError> {
 
         }
     };
