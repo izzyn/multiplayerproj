@@ -1,4 +1,5 @@
 // src/bin/client.rs
+use core::net;
 use helper::*;
 use shared_proc::{expand, netfunc};
 use std::error::Error;
@@ -17,7 +18,9 @@ async fn main() {
 }
 
 #[netfunc]
-fn testa(a: String, b: i32) -> i32 { return 2;}
+fn testa(a: &str, b: i32) {
+    println!("{}{}", a, b);
+}
 
 async fn send_request(stream: TcpStream) -> Result<(), Box<dyn Error>> {
     loop {
