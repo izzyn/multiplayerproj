@@ -23,6 +23,7 @@ fn testa(a: &str, b: i32) {
 }
 
 async fn send_request(stream: TcpStream) -> Result<(), Box<dyn Error>> {
+    shared::signal::connect!()
     loop {
         println!("Expecting input...");
         let mut close = false;

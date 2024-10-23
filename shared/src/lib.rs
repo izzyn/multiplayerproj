@@ -2,6 +2,7 @@
 pub mod signal;
 
 use helper::{ParsedData, ParsedNode, ParsedNodeId, ParsedTree};
+
 pub mod data {
     use core::f32;
     pub use helper::{ParsedData, ParsedNode, ParsedNodeId, ParsedTree};
@@ -355,6 +356,17 @@ pub mod data {
                 })
             }
         };
+    }
+}
+pub mod clients {
+    use std::collections::HashMap;
+
+    use helper::ParsedData;
+
+    use crate::data::DataParseError;
+
+    struct Client {
+        connected_funcs: HashMap<usize, fn(&[ParsedData]) -> Result<(), DataParseError>>,
     }
 }
 macro_rules! test_encoding {
