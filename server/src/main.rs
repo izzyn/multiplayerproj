@@ -1,4 +1,4 @@
-// src/bin/server.rs
+// src/bin/server/main.rs
 use shared::{
     clients::Client,
     connect,
@@ -44,14 +44,13 @@ async fn handle_stream(stream: TcpStream) -> Result<(), Box<dyn Error>> {
     let mut queue: Vec<u8> = vec![];
     connect!(2, client, test);
 
-    let hasread = false;
     loop {
         let ready = stream
             .ready(Interest::READABLE | Interest::WRITABLE)
             .await?;
         if ready.is_readable() {
             match stream.try_read(&mut client.outputbffr) {
-                Ok(n) => {
+                Ok(_n) => {
                     match shared::data::parse(&client.outputbffr) {
                         Ok(t) => {
                             let _ = client.exec_data(t);
@@ -70,7 +69,7 @@ async fn handle_stream(stream: TcpStream) -> Result<(), Box<dyn Error>> {
         }
 
         if ready.is_writable() {
-            if let Some(a) = queue.pop() {
+            if let Some(_a) = queue.pop() {
                 client.send(
                     2,
                     &[
