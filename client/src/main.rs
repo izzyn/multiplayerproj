@@ -1,11 +1,8 @@
 // src/bin/client.rs
-use core::net;
-use helper::*;
 use shared::data::{encode_f32, parse};
-use shared_proc::{expand, netfunc};
+use shared_proc::netfunc;
 use std::error::Error;
-use std::io::{self, stdin};
-use tokio::io::AsyncReadExt;
+use std::io::{self};
 use tokio::net::TcpStream;
 
 #[tokio::main]

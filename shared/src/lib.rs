@@ -1,14 +1,13 @@
 //shared/src/lib.rs
 pub mod signal;
-use helper::{ParsedData, ParsedNode, ParsedNodeId, ParsedTree};
 pub use paste;
 
 pub mod data {
     use core::f32;
     pub use helper::{ParsedData, ParsedNode, ParsedNodeId, ParsedTree};
-    use std::fs;
+    
     use std::str::from_utf8;
-    use std::{error::Error, fmt, num::NonZeroUsize, str::FromStr, usize};
+    use std::{error::Error, fmt, num::NonZeroUsize, usize};
 
     #[derive(Debug)]
     pub struct DataParseError {
@@ -45,7 +44,7 @@ pub mod data {
         type Error = ();
 
         fn try_from(value: u8) -> Result<Self, Self::Error> {
-            return match value {
+            match value {
                 0 => Ok(DataIDs::U8),
                 1 => Ok(DataIDs::U16),
                 2 => Ok(DataIDs::U32),
@@ -62,7 +61,7 @@ pub mod data {
                 13 => Ok(DataIDs::SIGNAL),
                 14 => Ok(DataIDs::ENDPKG),
                 _ => Err(()),
-            };
+            }
         }
     }
 
@@ -98,7 +97,7 @@ pub mod data {
         returndata[0] = DataIDs::CHAR as u8;
         let converted_data = (data as u32).to_be_bytes();
         returndata[1..].copy_from_slice(&converted_data);
-        return returndata;
+        returndata
     }
 
     encode!(F32, f32);
@@ -131,7 +130,7 @@ pub mod data {
     }
         returndata.extend_from_slice(stringbytes);
         //println!("String UTF8 Encoding: {:?}", returndata);
-        return Ok(returndata);
+        Ok(returndata)
     }
 
     //pub fn format_data()
@@ -150,13 +149,10 @@ pub mod data {
 
             let typeidx = idx;
             idx += 1;
-            match currentid.0.checked_add(1) {
-                None => {
-                    return Err(DataParseError {
-                        message: "Parsing tree id caused integer overflow".to_string(),
-                    })
-                }
-                _ => (),
+            if currentid.0.checked_add(1).is_none() {
+                return Err(DataParseError {
+                    message: "Parsing tree id caused integer overflow".to_string(),
+                })
             }
             let datatypeerr = "Error when parsing ".to_string();
             let data = match DataIDs::try_from(bytes[typeidx])
@@ -229,7 +225,7 @@ pub mod data {
             };
 
             //TODO: Rework this part to add support for vectors
-            if tree.nodes.len() != 0 {
+            if !tree.nodes.is_empty() {
                 tree.nodes.last_mut().unwrap().next = Some(currentid);
             }
             let node = ParsedNode {
@@ -241,15 +237,15 @@ pub mod data {
             previousid = Some(currentid);
             tree.nodes.push(node);
         }
-        return Err(DataParseError {
+        Err(DataParseError {
             message: String::from("Recieved data without a proper end signal."),
-        });
+        })
     }
 
     fn parse_basic(bytes: &[u8]) -> Result<(ParsedData, usize), DataParseError> {
         let mut idx = 0;
         let datatypeerr = "Error when parsing ".to_string();
-        let data = match DataIDs::try_from(bytes[0]).ok().ok_or(DataParseError {
+        match DataIDs::try_from(bytes[0]).ok().ok_or(DataParseError {
             message: "Attempted to parse invalid datatype when parsing basic data".to_string(),
         })? {
             DataIDs::U8 => {
@@ -259,7 +255,7 @@ pub mod data {
                     })?,
                 ));
                 idx += 1;
-                return Ok((parsed, idx));
+                Ok((parsed, idx))
             }
             DataIDs::U16 => {
                 let parsed = ParsedData::U16(u16::from_be_bytes(
@@ -268,7 +264,7 @@ pub mod data {
                     })?,
                 ));
                 idx += 2;
-                return Ok((parsed, idx));
+                Ok((parsed, idx))
             }
             DataIDs::U32 => {
                 let parsed = ParsedData::U32(u32::from_be_bytes(
@@ -277,7 +273,7 @@ pub mod data {
                     })?,
                 ));
                 idx += 4;
-                return Ok((parsed, idx));
+                Ok((parsed, idx))
             }
             DataIDs::SIGNAL => {
                 let parsed = ParsedData::SIGNAL(u32::from_be_bytes(
@@ -286,7 +282,7 @@ pub mod data {
                     })?,
                 ));
                 idx += 4;
-                return Ok((parsed, idx));
+                Ok((parsed, idx))
             }
             DataIDs::U64 => {
                 let parsed = ParsedData::U64(u64::from_be_bytes(
@@ -295,7 +291,7 @@ pub mod data {
                     })?,
                 ));
                 idx += 8;
-                return Ok((parsed, idx));
+                Ok((parsed, idx))
             }
             DataIDs::I8 => {
                 let parsed = ParsedData::I8(i8::from_be_bytes(
@@ -304,7 +300,7 @@ pub mod data {
                     })?,
                 ));
                 idx += 1;
-                return Ok((parsed, idx));
+                Ok((parsed, idx))
             }
             DataIDs::I16 => {
                 let parsed = ParsedData::I16(i16::from_be_bytes(
@@ -313,7 +309,7 @@ pub mod data {
                     })?,
                 ));
                 idx += 2;
-                return Ok((parsed, idx));
+                Ok((parsed, idx))
             }
             DataIDs::I32 => {
                 let parsed = ParsedData::I32(i32::from_be_bytes(
@@ -322,7 +318,7 @@ pub mod data {
                     })?,
                 ));
                 idx += 4;
-                return Ok((parsed, idx));
+                Ok((parsed, idx))
             }
             DataIDs::I64 => {
                 let parsed = ParsedData::I64(i64::from_be_bytes(
@@ -331,7 +327,7 @@ pub mod data {
                     })?,
                 ));
                 idx += 8;
-                return Ok((parsed, idx));
+                Ok((parsed, idx))
             }
             DataIDs::CHAR => {
                 let parsed = ParsedData::CHAR(
@@ -343,7 +339,7 @@ pub mod data {
                     .unwrap(),
                 );
                 idx += 4;
-                return Ok((parsed, idx));
+                Ok((parsed, idx))
             }
             DataIDs::F32 => {
                 let parsed = ParsedData::F32(f32::from_be_bytes(
@@ -352,7 +348,7 @@ pub mod data {
                     })?,
                 ));
                 idx += 4;
-                return Ok((parsed, idx));
+                Ok((parsed, idx))
             }
             DataIDs::F64 => {
                 let parsed = ParsedData::F64(f64::from_be_bytes(
@@ -361,14 +357,14 @@ pub mod data {
                     })?,
                 ));
                 idx += 8;
-                return Ok((parsed, idx));
+                Ok((parsed, idx))
             }
             _ => {
-                return Err(DataParseError {
+                Err(DataParseError {
                     message: "Tried to parse non-basic datatype as a basic datatype".to_string(),
                 })
             }
-        };
+        }
     }
 }
 pub mod clients {
@@ -384,6 +380,12 @@ pub mod clients {
         _mesglengths: Vec<usize>,
         pub inputbffr: [u8; 2048],
         pub outputbffr: [u8; 4096],
+    }
+
+    impl Default for Client {
+        fn default() -> Self {
+            Self::new()
+        }
     }
 
     impl Client {
@@ -413,7 +415,7 @@ pub mod clients {
             pushvec.push(DataIDs::ENDPKG as u8);
 
             self._mesglengths.push(pushvec.len());
-            pushvec.extend(self.inputvec.drain(..));
+            pushvec.append(&mut self.inputvec);
             self.inputvec = pushvec;
         }
 
@@ -517,7 +519,7 @@ macro_rules! test_encoding {
 #[cfg(test)]
 mod tests {
     use core::panic;
-    use std::{fs, i32, str::from_utf8, u8};
+    use std::{fs, i32, u8};
 
     use super::*;
     use data::*;
@@ -548,7 +550,7 @@ mod tests {
     const TESTS_i64: [i64; 5] = [2, i64::MAX, 4, 5, 6];
 
     #[allow(non_snake_case, non_upper_case_globals)]
-    const TESTS_f32: [f32; 5] = [-23.0, i8::MAX as f32, 0.333333333, 6.0, 0.0];
+    const TESTS_f32: [f32; 5] = [-23.0, i8::MAX as f32, 0.333_333_34, 6.0, 0.0];
 
     #[allow(non_snake_case, non_upper_case_globals)]
     const TESTS_f64: [f64; 5] = [2.0, i16::MAX as f64, -999.0, 30.0, -2319.392048];
@@ -602,7 +604,7 @@ mod tests {
                 Err(e) => {
                     if test_bytes.len() > buff.len() - 1
                         && e.message
-                            == "Reading string would cause a buffer overflow :(".to_string()
+                            == *"Reading string would cause a buffer overflow :("
                     {
                         return;
                     }

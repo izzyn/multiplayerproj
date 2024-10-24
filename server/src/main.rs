@@ -1,14 +1,13 @@
 // src/bin/server.rs
-use core::net::SocketAddr;
 use shared::{
     clients::Client,
     connect,
-    data::{encode_i32, encode_string, encode_u32},
+    data::{encode_i32, encode_string},
 };
 use shared_proc::netfunc;
-use std::{error::Error, i32, io};
+use std::{error::Error, io};
 use tokio::{
-    io::{AsyncReadExt, Interest},
+    io::Interest,
     net::{TcpListener, TcpStream},
 };
 
@@ -45,7 +44,7 @@ async fn handle_stream(stream: TcpStream) -> Result<(), Box<dyn Error>> {
     let mut queue: Vec<u8> = vec![];
     connect!(2, client, test);
 
-    let mut hasread = false;
+    let hasread = false;
     loop {
         let ready = stream
             .ready(Interest::READABLE | Interest::WRITABLE)
@@ -53,7 +52,7 @@ async fn handle_stream(stream: TcpStream) -> Result<(), Box<dyn Error>> {
         if ready.is_readable() {
             match stream.try_read(&mut client.outputbffr) {
                 Ok(n) => {
-                    let parsed = match shared::data::parse(&client.outputbffr) {
+                    match shared::data::parse(&client.outputbffr) {
                         Ok(t) => {
                             let _ = client.exec_data(t);
                             queue.push(1);
@@ -72,7 +71,7 @@ async fn handle_stream(stream: TcpStream) -> Result<(), Box<dyn Error>> {
 
         if ready.is_writable() {
             if let Some(a) = queue.pop() {
-                let _ = client.send(
+                client.send(
                     2,
                     &[
                         encode_string("hello wassup!".to_string())?,

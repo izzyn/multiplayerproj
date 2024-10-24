@@ -1,4 +1,3 @@
-use std::iter::Filter;
 use std::vec;
 
 use proc_macro2::Delimiter;
@@ -11,7 +10,6 @@ use proc_macro2::TokenStream;
 use proc_macro2::TokenTree;
 use quote::format_ident;
 use quote::quote;
-use quote::ToTokens;
 
 #[proc_macro_attribute]
 pub fn expand(
@@ -56,7 +54,7 @@ pub fn netfunc(
         panic!("can't find the function name")
     };
 
-    let Some(TokenTree::Group(ref mut fn_args)) = iterator.nth(0) else {
+    let Some(TokenTree::Group(ref mut fn_args)) = iterator.next() else {
         panic!("can't find the function args")
     };
 
@@ -85,14 +83,14 @@ pub fn netfunc(
                             if argtokens[a - 1].to_string() != "&" {
                                 panic!(
                                     "Non convertable argument used: {}, did you mean to use a &str",
-                                    argtokens[a].to_string()
+                                    argtokens[a]
                                 )
                             }
                             TokenTree::Ident(Ident::new("STRING", Span::call_site()))
                         } else {
                             panic!(
                                 "Non convertable argument used: {}",
-                                argtokens[a].to_string()
+                                argtokens[a]
                             )
                         }
                     }
@@ -109,7 +107,7 @@ pub fn netfunc(
                     "f64" => TokenTree::Ident(Ident::new("F64", Span::call_site())),
                     _ => panic!(
                         "Non convertable argument used: {}",
-                        argtokens[a].to_string()
+                        argtokens[a]
                     ),
                 });
             }
