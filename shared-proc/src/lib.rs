@@ -46,7 +46,7 @@ pub fn netfunc(
         .collect::<Vec<TokenTree>>();
     let mut iterator = trees.iter_mut().skip_while(|x| {
         if let TokenTree::Ident(x) = x {
-            x.to_string() != "fn"
+            *x != "fn"
         } else {
             false
         }
@@ -163,7 +163,6 @@ pub fn netfunc(
             }
         }
     };
-    println!("{}", netfunction.to_string());
 
     let functiontree = netfunction.into_iter().collect::<Vec<TokenTree>>();
     trees = [trees, functiontree].concat();
