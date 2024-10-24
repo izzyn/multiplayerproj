@@ -38,6 +38,7 @@ pub mod data {
         F64,
         STRING,
         VECTOR,
+        SIGNAL,
         ENDPKG,
     }
     impl TryFrom<u8> for DataIDs {
@@ -275,6 +276,15 @@ pub mod data {
                 idx += 4;
                 return Ok((parsed, idx));
             }
+            DataIDs::SIGNAL => {
+                let parsed = ParsedData::SIGNAL(u32::from_be_bytes(
+                    *bytes[1..].first_chunk::<4>().ok_or(DataParseError {
+                        message: format!("{datatypeerr} SIGNAL"),
+                    })?,
+                ));
+                idx += 4;
+                return Ok((parsed, idx));
+            }
             DataIDs::U64 => {
                 let parsed = ParsedData::U64(u64::from_be_bytes(
                     *bytes[1..].first_chunk::<8>().ok_or(DataParseError {
@@ -359,14 +369,70 @@ pub mod data {
     }
 }
 pub mod clients {
-    use std::collections::HashMap;
+    use std::{collections::HashMap, usize};
 
-    use helper::ParsedData;
+    use helper::{ParsedData, ParsedTree};
 
-    use crate::data::DataParseError;
+    use crate::data::{encode_u32, DataIDs, DataParseError};
 
-    struct Client {
+    pub struct Client<'a> {
         connected_funcs: HashMap<usize, fn(&[ParsedData]) -> Result<(), DataParseError>>,
+        inputvec: Vec<u8>,
+        inputbffr: &'a [u8],
+        outputbffr: &'a [u8],
+    }
+
+    impl<'a> Client<'a> {
+        pub fn new(bufsize: usize) -> Client<'a> {
+            Client {
+                inputvec: vec![],
+                outputbffr: outputbffr,
+                inputbffr: inputbffr,
+                connected_funcs: HashMap::new(),
+            }
+        }
+        pub fn _connect(
+            &mut self,
+            id: usize,
+            function: fn(&[ParsedData]) -> Result<(), DataParseError>,
+        ) {
+            self.connected_funcs.insert(id, function);
+        }
+
+        pub fn send(&mut self, id: u32, args: &[u8]) {
+            let mut bytes = encode_u32(id);
+            bytes[0] = DataIDs::SIGNAL as u8;
+            self.inputvec.extend_from_slice(&bytes);
+            self.inputvec.extend_from_slice(args);
+            self.inputvec.push(DataIDs::ENDPKG as u8);
+        }
+
+        pub fn exec_data(&self, tree: ParsedTree) -> Result<(), DataParseError> {
+            let mut id: u32 = 0;
+            let mut foundfn: bool = false;
+            let mut args: Vec<ParsedData> = vec![];
+            for i in tree.nodes {
+                if foundfn {
+                    args.push(i.data.clone());
+                }
+                if let ParsedData::SIGNAL(x) = i.data.clone() {
+                    if !foundfn {
+                        foundfn = true;
+                        id = x;
+                    }
+                }
+            }
+
+            if !foundfn {
+                return Ok(());
+            }
+            match self.connected_funcs.get(&(id as usize)) {
+                Some(f) => f(&args),
+                None => Err(DataParseError {
+                    message: "Function signaled was not connected".to_string(),
+                }),
+            }
+        }
     }
 }
 macro_rules! test_encoding {
