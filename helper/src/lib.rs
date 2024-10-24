@@ -23,6 +23,7 @@ pub enum ParsedData {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ParsedNodeId(pub NonZeroUsize);
 
+#[derive(Debug)]
 pub struct ParsedNode {
     pub parent: Option<ParsedNodeId>,
 
@@ -33,6 +34,7 @@ pub struct ParsedNode {
     pub data: ParsedData,
 }
 
+#[derive(Debug)]
 pub struct ParsedTree {
     pub nodes: Vec<ParsedNode>,
 }

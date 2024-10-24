@@ -1,7 +1,7 @@
 //shared/src/lib.rs
 pub mod signal;
-
 use helper::{ParsedData, ParsedNode, ParsedNodeId, ParsedTree};
+pub use paste;
 
 pub mod data {
     use core::f32;
@@ -59,7 +59,8 @@ pub mod data {
                 10 => Ok(DataIDs::F64),
                 11 => Ok(DataIDs::STRING),
                 12 => Ok(DataIDs::VECTOR),
-                13 => Ok(DataIDs::ENDPKG),
+                13 => Ok(DataIDs::SIGNAL),
+                14 => Ok(DataIDs::ENDPKG),
                 _ => Err(()),
             };
         }
@@ -117,8 +118,9 @@ pub mod data {
         }
         let mut returndata: Vec<u8> = Vec::new();
         returndata.push(DataIDs::STRING as u8);
-        println!("Length of string in bytes: {length}");
-        println!("Amount of bytes in length {}", n);
+        //println!("Length of string in bytes: {length}");
+
+        //println!("Amount of bytes in length {}", n);
         match n {
         1 => returndata.extend_from_slice(&encode_u8(length.try_into().unwrap())),
         2 => returndata.extend_from_slice(&encode_u16(length.try_into().unwrap())),
@@ -128,7 +130,7 @@ pub mod data {
 
     }
         returndata.extend_from_slice(stringbytes);
-        println!("String UTF8 Encoding: {:?}", returndata);
+        //println!("String UTF8 Encoding: {:?}", returndata);
         return Ok(returndata);
     }
 
@@ -172,6 +174,7 @@ pub mod data {
                 | DataIDs::I64
                 | DataIDs::F32
                 | DataIDs::F64
+                | DataIDs::SIGNAL
                 | DataIDs::CHAR => {
                     let result: (ParsedData, usize) = parse_basic(&bytes[typeidx..])?;
                     idx += result.1;
@@ -179,27 +182,27 @@ pub mod data {
                 }
                 DataIDs::STRING => {
                     let result = parse_basic(&bytes[typeidx + 1..])?;
-                    println!("Parsing string...");
-                    println!("{:?}", &bytes[typeidx + 1..]);
+                    //println!("Parsing string...");
+                    //println!("{:?}", &bytes[typeidx + 1..]);
                     idx += result.1 + 1;
                     let length = match result.0 {
-                ParsedData::U8(t) => {
-                    t as usize
-                },
-                ParsedData::U16(t) => {
-                    t as usize
-                },
-                ParsedData::U32(t) => {
-                    t as usize
-                },
-                ParsedData::U64(t) => {
-                    t as usize
-                },
+                    ParsedData::U8(t) => {
+                        t as usize
+                    },
+                    ParsedData::U16(t) => {
+                        t as usize
+                    },
+                    ParsedData::U32(t) => {
+                        t as usize
+                    },
+                    ParsedData::U64(t) => {
+                        t as usize
+                    },
                 _ => {return Err(DataParseError {message : "String length was of an invalid type (did you try to use a signed integer?)".to_string()})}
                 };
-                    println!("Length of string: {length}");
+                    //println!("Length of string: {length}");
                     if bytes.len() >= idx + length {
-                        println!("Bytes to parse as UTF8 {:?}", &bytes[idx..idx + length]);
+                        //println!("Bytes to parse as UTF8 {:?}", &bytes[idx..idx + length]);
                         let string = match from_utf8(&bytes[idx..length + idx]) {
                             Ok(t) => t.to_string(),
                             Err(e) => {
@@ -209,7 +212,7 @@ pub mod data {
                             }
                         };
                         idx += length;
-                        println!("Index of next data: {}", idx);
+                        //println!("Index of next data: {}", idx);
                         ParsedData::STRING(string)
                     } else {
                         return Err(DataParseError {
@@ -375,19 +378,21 @@ pub mod clients {
 
     use crate::data::{encode_u32, DataIDs, DataParseError};
 
-    pub struct Client<'a> {
+    pub struct Client {
         connected_funcs: HashMap<usize, fn(&[ParsedData]) -> Result<(), DataParseError>>,
         inputvec: Vec<u8>,
-        inputbffr: &'a [u8],
-        outputbffr: &'a [u8],
+        _mesglengths: Vec<usize>,
+        pub inputbffr: [u8; 2048],
+        pub outputbffr: [u8; 4096],
     }
 
-    impl<'a> Client<'a> {
-        pub fn new(bufsize: usize) -> Client<'a> {
+    impl Client {
+        pub fn new() -> Client {
             Client {
+                _mesglengths: vec![],
                 inputvec: vec![],
-                outputbffr: outputbffr,
-                inputbffr: inputbffr,
+                outputbffr: [0; 4096],
+                inputbffr: [0; 2048],
                 connected_funcs: HashMap::new(),
             }
         }
@@ -400,18 +405,57 @@ pub mod clients {
         }
 
         pub fn send(&mut self, id: u32, args: &[u8]) {
+            let mut pushvec = vec![];
             let mut bytes = encode_u32(id);
             bytes[0] = DataIDs::SIGNAL as u8;
-            self.inputvec.extend_from_slice(&bytes);
-            self.inputvec.extend_from_slice(args);
-            self.inputvec.push(DataIDs::ENDPKG as u8);
+            pushvec.extend_from_slice(&bytes);
+            pushvec.extend_from_slice(args);
+            pushvec.push(DataIDs::ENDPKG as u8);
+
+            self._mesglengths.push(pushvec.len());
+            pushvec.extend(self.inputvec.drain(..));
+            self.inputvec = pushvec;
+        }
+
+        pub fn push_input(&mut self) {
+            let mut idx: usize = 0;
+            let mut sizeprogress = 0;
+            let mut nextsize: usize = 0;
+            let mut set_size = false;
+
+            self.inputbffr = [0; 2048];
+            for i in 0..self.inputvec.len() {
+                if !set_size {
+                    match self._mesglengths.pop() {
+                        Some(v) => nextsize = v,
+                        None => {
+                            break;
+                        }
+                    };
+                    set_size = true;
+                    if nextsize + idx < self.inputbffr.len() {
+                    } else {
+                        break;
+                    }
+                }
+
+                if nextsize != sizeprogress + 1 {
+                    self.inputbffr[idx] = self.inputvec[idx];
+                    idx += 1;
+                    sizeprogress += 1;
+                } else {
+                    sizeprogress = 0;
+                    set_size = false;
+                }
+            }
+            self.inputbffr[idx] = DataIDs::ENDPKG as u8;
         }
 
         pub fn exec_data(&self, tree: ParsedTree) -> Result<(), DataParseError> {
             let mut id: u32 = 0;
             let mut foundfn: bool = false;
             let mut args: Vec<ParsedData> = vec![];
-            for i in tree.nodes {
+            for i in &tree.nodes {
                 if foundfn {
                     args.push(i.data.clone());
                 }
@@ -424,6 +468,7 @@ pub mod clients {
             }
 
             if !foundfn {
+                println!("Didn't find a function, returning");
                 return Ok(());
             }
             match self.connected_funcs.get(&(id as usize)) {

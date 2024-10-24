@@ -1,17 +1,16 @@
 // src/bin/server.rs
 use core::net::SocketAddr;
+use shared::{
+    clients::Client,
+    connect,
+    data::{encode_i32, encode_string, encode_u32},
+};
+use shared_proc::netfunc;
 use std::{error::Error, i32, io};
 use tokio::{
     io::{AsyncReadExt, Interest},
     net::{TcpListener, TcpStream},
 };
-
-struct Client {
-    sendpkts: Vec<i32>,
-    sendbfr: [i32; 2048],
-    readbfr: [i32; 2048],
-    addr: SocketAddr,
-}
 
 #[tokio::main]
 async fn main() {
@@ -36,21 +35,29 @@ async fn listen(bind_addr: &str) {
     }
 }
 
+#[netfunc]
+fn test(a: f32) {
+    println!("{a} WOAH!");
+}
 async fn handle_stream(stream: TcpStream) -> Result<(), Box<dyn Error>> {
     println!("Connection from {}", stream.peer_addr().unwrap());
-    let mut reply_queue: Vec<Vec<u8>> = Vec::new();
-    let mut buf: [u8; 1024];
+    let mut client = Client::new();
+    let mut queue: Vec<u8> = vec![];
+    connect!(2, client, test);
 
+    let mut hasread = false;
     loop {
         let ready = stream
             .ready(Interest::READABLE | Interest::WRITABLE)
             .await?;
         if ready.is_readable() {
-            buf = [0; 1024];
-            match stream.try_read(&mut buf) {
+            match stream.try_read(&mut client.outputbffr) {
                 Ok(n) => {
-                    let parsed = match shared::data::parse(&buf) {
-                        Ok(t) => println!("{:?}", t.nodes[0].data),
+                    let parsed = match shared::data::parse(&client.outputbffr) {
+                        Ok(t) => {
+                            let _ = client.exec_data(t);
+                            queue.push(1);
+                        }
                         Err(e) => return Err(Box::new(e)),
                     };
                 }
@@ -64,8 +71,18 @@ async fn handle_stream(stream: TcpStream) -> Result<(), Box<dyn Error>> {
         }
 
         if ready.is_writable() {
-            if let Some(msg) = reply_queue.pop() {
-                match stream.try_write(&msg) {
+            if let Some(a) = queue.pop() {
+                let _ = client.send(
+                    2,
+                    &[
+                        encode_string("hello wassup!".to_string())?,
+                        encode_i32(32).to_vec(),
+                    ]
+                    .to_vec()
+                    .concat(),
+                );
+                client.push_input();
+                match stream.try_write(&client.inputbffr) {
                     Ok(n) => {
                         println!("Wrote {} bytes", n);
                     }

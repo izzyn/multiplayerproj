@@ -159,7 +159,7 @@ pub fn netfunc(
                 return Ok(())
             }
             else{
-                return Err(DataParseError { message : "Error calling function via signal".to_string() })
+                return Err(DataParseError { message : "Functions had incorrect type signature".to_string() })
             }
         }
     };

@@ -1,9 +1,8 @@
-macro_rules! connector {
-    ($client:ident, $signal:expr, $function : ident) => {
-        ::paste::paste! {
+#[macro_export]
+macro_rules! connect {
+    ($signal:expr,$client:ident, $function : ident) => {
+        $crate::paste::paste! {
             $client._connect($signal, [<$function ____net____>]);
         }
     };
 }
-
-pub(crate) use connector;
