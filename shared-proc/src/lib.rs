@@ -36,7 +36,7 @@ pub fn expand(
 //&str
 #[proc_macro_attribute]
 pub fn netfunc(
-    attr: proc_macro::TokenStream,
+    _attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     let mut trees: Vec<TokenTree> = TokenStream::from(item)
@@ -58,16 +58,6 @@ pub fn netfunc(
         panic!("can't find the function args")
     };
 
-    println!("{}", fn_name);
-    println!("{}", fn_args);
-    let argidents: Vec<TokenTree> = fn_args
-        .stream()
-        .into_iter()
-        .filter(|x| match x {
-            TokenTree::Ident(_) => true,
-            _ => false,
-        })
-        .collect();
     let mut argtypes: Vec<TokenTree> = vec![];
     let mut enumtypes: Vec<TokenTree> = vec![];
 
@@ -88,10 +78,7 @@ pub fn netfunc(
                             }
                             TokenTree::Ident(Ident::new("STRING", Span::call_site()))
                         } else {
-                            panic!(
-                                "Non convertable argument used: {}",
-                                argtokens[a]
-                            )
+                            panic!("Non convertable argument used: {}", argtokens[a])
                         }
                     }
                     "u8" => TokenTree::Ident(Ident::new("U8", Span::call_site())),
@@ -105,10 +92,7 @@ pub fn netfunc(
                     "char" => TokenTree::Ident(Ident::new("CHAR", Span::call_site())),
                     "f32" => TokenTree::Ident(Ident::new("F32", Span::call_site())),
                     "f64" => TokenTree::Ident(Ident::new("F64", Span::call_site())),
-                    _ => panic!(
-                        "Non convertable argument used: {}",
-                        argtokens[a]
-                    ),
+                    _ => panic!("Non convertable argument used: {}", argtokens[a]),
                 });
             }
             identnr += 1;
